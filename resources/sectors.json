@@ -1,0 +1,33 @@
+[
+	{
+		"height": 130,
+		"width1": 66,
+		"width2": 66,
+		"width3": 66,
+		"width4": 66,
+		"width5": 66,
+		"width6": 66,
+		"width7": 66,
+		"width8": 66,
+		"width9": 66,
+		"width10": 46
+	},
+
+	{
+		"height": 120,
+		"width1": 150,
+		"width2": 135,
+		"width3": 135,
+		"width4": 150,
+		"width5": 70
+	},
+
+	{
+		"height": 210,
+		"width1": 150,
+		"width2": 135,
+		"width3": 135,
+		"width4": 150,
+		"width5": 70
+	}
+]

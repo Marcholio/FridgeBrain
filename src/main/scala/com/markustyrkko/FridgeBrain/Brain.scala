@@ -8,8 +8,24 @@ import java.awt.image.BufferedImage
 import com.sun.prism.BasicStroke
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.nio.Buffer
+import scala.util.parsing.json.JSONObject
+import com.google.gson.stream.JsonReader
+import com.google.gson.JsonStreamParser
+import java.io.InputStreamReader
+import com.google.gson.JsonObject
+import java.io.BufferedReader
+import scala.util.parsing.json.JSONArray
+import com.google.gson.JsonArray
+import com.google.gson.JsonParser
+import scala.collection.mutable.Map
 
 object Brain extends App {
+	
+	// Uncomment to test as separate application without server
+	val baos = new ByteArrayOutputStream()
+	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
+	println(analyze(baos.toByteArray()))
 	
 	/**
 	 * Analyzes given image and returns result of it's content as String
@@ -25,32 +41,70 @@ object Brain extends App {
 	  val height = img.getHeight
 	  val width = img.getWidth
 	  
+	  val sectors = getSectors()
+	  
 	  // Subimage dimensions
 	  val xStep = 66
-	  val yStep = 130
+	  var yStep = 130
 	  
 	  // Drink counters
 	  var beers = 0
 	  var longs = 0
 	  
-	  // Currently analyzes only top row of fridge containing beers and long drinks
-	  for(y <- 0 until yStep by yStep; x <- 0 until width - xStep by xStep) {
-			// Get separate subimage
-	  	val subImg = copyImg(img.getSubimage(x, y, xStep, yStep))
-			
-	  	// Convert subimage to black-white map
-	  	bwSub(subImg)
-	  	
-	  	// Compare map to known models of each drink and empty space
-			val result = getMatch(subImg, x / xStep)
-			
-			// Increase counters if necessary
-			if(result.toString().equals(Drink.BEER.toString())) {
-				beers += 1
-			} else if(result.toString().equals(Drink.LONG.toString())) {
-				longs += 1
-			}
+	  // variables for subimage position
+	  var x = 0
+	  var y = 0
+	  var pos = 0
+	  
+	  for(row <- sectors.keySet.toList.reverse) {
+	  	if(pos < 9) {
+	  		val rowHeight = sectors(row)._1
+		  	val widthIterator = sectors(row)._2.toIterator
+		  	while(widthIterator.hasNext) {
+		  		val sectorWidth = widthIterator.next
+		  		
+		  		// Get separate subimage
+			  	val subImg = copyImg(img.getSubimage(x, y, sectorWidth, rowHeight))
+					
+			  	// Convert subimage to black-white map
+			  	bwSub(subImg)
+			  	
+			  	// Compare map to known models of each drink and empty space
+			  	if(pos < 9) {
+						val result = getMatch(subImg, pos)
+						
+						// Increase counters if necessary
+						if(result.toString().equals(Drink.BEER.toString())) {
+							beers += 1
+						} else if(result.toString().equals(Drink.LONG.toString())) {
+							longs += 1
+						}
+			  		x += sectorWidth
+			  		pos += 1
+			  	}
+		  	}
+		  	y += rowHeight
+		  }
 	  }
+	  
+//	  // Currently analyzes only top row of fridge containing beers and long drinks
+//	  for(y <- 0 until yStep by yStep; x <- 0 until width - xStep by xStep) {
+//			// Get separate subimage
+//	  	val subImg = copyImg(img.getSubimage(x, y, xStep, yStep))
+//			
+//	  	// Convert subimage to black-white map
+//	  	bwSub(subImg)
+//	  	
+//	  	// Compare map to known models of each drink and empty space
+//			val result = getMatch(subImg, x / xStep)
+//			
+//			// Increase counters if necessary
+//			if(result.toString().equals(Drink.BEER.toString())) {
+//				beers += 1
+//			} else if(result.toString().equals(Drink.LONG.toString())) {
+//				longs += 1
+//			}
+//	  }
 		return "There are approximately " + 2 * beers + " beer(s) and " + 2 * longs + " long drink(s) in the fridge"
 	}
 	
@@ -66,6 +120,44 @@ object Brain extends App {
 			case _: Exception =>
 				return null
 		}
+	}
+	
+	/**
+	 * Reads sector information and returns Map containing information about each row
+	 * @return		Map with row name as key and Tuple(Height, List[Width]) as value
+	 */
+	def getSectors(): Map[String, (Int, List[Int])] = {
+		// Read json to String
+		val sectors = getClass().getResourceAsStream("/sectors.json")
+		val reader = new BufferedReader(new InputStreamReader(sectors, "UTF-8"))
+		var line = reader.readLine()
+		var jsonString = ""
+		while(line != null) {
+			jsonString += line
+			line = reader.readLine()
+		}
+		reader.close()
+		
+		// Parse Json to Map
+		var result = Map[String, (Int, List[Int])]()
+		val parser = new JsonParser()
+		val jsonArray = parser.parse(jsonString).getAsJsonArray
+		for(i <- 0 until jsonArray.size()) {
+			val row = jsonArray.get(i).getAsJsonObject
+			val height = row.get("height").getAsInt
+			
+			var j = 1
+			var width = row.get("width" + j)
+			var widthList = List[Int]()
+			// Loop through widths
+			while(width != null) {
+				widthList = widthList :+ width.getAsInt
+				j += 1
+				width = row.get("width" + j)
+			}
+			result("row" + i) = (height, widthList)
+		}
+		return result
 	}
 	
 	/**
