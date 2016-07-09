@@ -39,3 +39,8 @@ build.log
 
 #SHITTY output not in target directory
 build.log
+/originals/
+/examData/
+/trainingData/
+/originals/
+.cache-main
