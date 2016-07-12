@@ -52,11 +52,11 @@ object Brain extends App {
 	  var longs = 0
 	  
 	  // variables for subimage position
-	  var x = 0
 	  var y = 0
 	  var pos = 0
 	  
 	  for(row <- sectors.keySet.toList.reverse) {
+	  	var x = 0
 	  	if(pos < 9) {
 	  		val rowHeight = sectors(row)._1
 		  	val widthIterator = sectors(row)._2.toIterator
@@ -86,25 +86,7 @@ object Brain extends App {
 		  	y += rowHeight
 		  }
 	  }
-	  
-//	  // Currently analyzes only top row of fridge containing beers and long drinks
-//	  for(y <- 0 until yStep by yStep; x <- 0 until width - xStep by xStep) {
-//			// Get separate subimage
-//	  	val subImg = copyImg(img.getSubimage(x, y, xStep, yStep))
-//			
-//	  	// Convert subimage to black-white map
-//	  	bwSub(subImg)
-//	  	
-//	  	// Compare map to known models of each drink and empty space
-//			val result = getMatch(subImg, x / xStep)
-//			
-//			// Increase counters if necessary
-//			if(result.toString().equals(Drink.BEER.toString())) {
-//				beers += 1
-//			} else if(result.toString().equals(Drink.LONG.toString())) {
-//				longs += 1
-//			}
-//	  }
+
 		return "There are approximately " + 2 * beers + " beer(s) and " + 2 * longs + " long drink(s) in the fridge"
 	}
 	
