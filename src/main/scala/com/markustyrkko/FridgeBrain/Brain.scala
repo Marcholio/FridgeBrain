@@ -23,9 +23,11 @@ import scala.collection.mutable.Map
 object Brain extends App {
 	
 	// Uncomment to test as separate application without server
-	val baos = new ByteArrayOutputStream()
+	private val baos = new ByteArrayOutputStream()
 	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
 	println(analyze(baos.toByteArray()))
+	
+	private var contents: Map[FridgeItem.Value, Int] = null
 	
 	/**
 	 * Analyzes given image and returns result of it's content as String
@@ -35,7 +37,6 @@ object Brain extends App {
 	def analyze(bytes: Array[Byte]): String = {
 		// Convert bytes to BufferedImage
 		val img = getImage(bytes)
-		ImageIO.write(img, "jpg", new File("img.jpg"))
 		
 		// Image dimensions
 	  val height = img.getHeight
@@ -43,13 +44,7 @@ object Brain extends App {
 	  
 	  val sectors = getSectors()
 	  
-	  // Subimage dimensions
-	  val xStep = 66
-	  var yStep = 130
-	  
-	  // Drink counters
-	  var beers = 0
-	  var longs = 0
+	  contents = Map[FridgeItem.Value, Int]()
 	  
 	  // variables for subimage position
 	  var y = 0
@@ -57,37 +52,29 @@ object Brain extends App {
 	  
 	  for(row <- sectors.keySet.toList.reverse) {
 	  	var x = 0
-	  	if(pos < 9) {
-	  		val rowHeight = sectors(row)._1
-		  	val widthIterator = sectors(row)._2.toIterator
-		  	while(widthIterator.hasNext) {
-		  		val sectorWidth = widthIterator.next
-		  		
-		  		// Get separate subimage
-			  	val subImg = copyImg(img.getSubimage(x, y, sectorWidth, rowHeight))
-					
-			  	// Convert subimage to black-white map
-			  	bwSub(subImg)
-			  	
-			  	// Compare map to known models of each drink and empty space
-			  	if(pos < 9) {
-						val result = getMatch(subImg, pos)
-						
-						// Increase counters if necessary
-						if(result.toString().equals(Drink.BEER.toString())) {
-							beers += 1
-						} else if(result.toString().equals(Drink.LONG.toString())) {
-							longs += 1
-						}
-			  		x += sectorWidth
-			  		pos += 1
-			  	}
-		  	}
-		  	y += rowHeight
-		  }
+  		val rowHeight = sectors(row)._1
+	  	val widthIterator = sectors(row)._2.toIterator
+	  	while(widthIterator.hasNext) {
+	  		val sectorWidth = widthIterator.next
+	  		
+	  		// Get separate subimage
+		  	val subImg = copyImg(img.getSubimage(x, y, sectorWidth, rowHeight))
+				
+		  	// Convert subimage to black-white map
+		  	bwSub(subImg)
+		  	
+		  	// Compare map to known models of each drink and empty space
+				val result = getMatch(subImg, pos)
+
+				increaseCount(result)
+				
+	  		x += sectorWidth
+	  		pos += 1
+	  	}
+	  	y += rowHeight
 	  }
 
-		return "There are approximately " + 2 * beers + " beer(s) and " + 2 * longs + " long drink(s) in the fridge"
+		return getMessage()
 	}
 	
 	/**
@@ -209,47 +196,63 @@ object Brain extends App {
    * @param	pos			Position of the image in the fridge
    * @return				Value of Drink enumeration representing the most likely match for given position
    */
-  def getMatch(image: BufferedImage, pos: Int): Drink.Value = {
-  	// Load models from memory for each possible option
-  	val beerModel = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/Beer.jpg"))
-  	val longModel = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/Long.jpg"))
-  	val inModel = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/In.jpg"))
-  	val outModel = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/Out.jpg"))
-
-  	// Compare image to each model
-  	val beerMatch = matcher(beerModel, image)
-  	val longMatch = matcher(longModel, image)
-  	val inMatch = matcher(inModel, image)
-  	val outMatch = matcher(outModel, image)
+  def getMatch(image: BufferedImage, pos: Int): FridgeItem.Value = {
+  	val matches = Map[FridgeItem.Value, Double]()
+  	
+  	// Load models from memory for each possible option and compare image to it
+  	for(item <- FridgeItem.values) {
+  		try {
+  			val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + ".jpg"))
+  			matches(item) =	matcher(model, image)
+  		} catch {
+  			case _ => matches(item) = 0.0
+  		}
+  	}
   	
   	// Uncomment for debugging purposes
-  	//println(pos + ": BEER=" + beerMatch + "% LONG=" + longMatch + "% IN=" + inMatch + "% OUT=" + outMatch)
+  	//println(pos + ": " + matches)
   	
   	// Following limits are based on empirical study and should be modified if necessary
+  	
+  	if(matches(FridgeItem.PROCCHEESE) > 85.0) {
+  		return FridgeItem.PROCCHEESE
+  		
+  	} else if(matches(FridgeItem.JAM) > 85.0) {
+  		return FridgeItem.JAM
+  	
+  	} else if(matches(FridgeItem.HAM) > matches(FridgeItem.EMPTY)) {
+  		return FridgeItem.HAM
+  	
+  	} else if(matches(FridgeItem.CHEESE) > matches(FridgeItem.EMPTY)) {
+  		return FridgeItem.CHEESE
+  	
+  	} else if(matches(FridgeItem.BUTTER) > matches(FridgeItem.EMPTY)) {
+  		return FridgeItem.BUTTER
+  		
   	/*
   	 * If the match for empty spot is over 70%, it's the most likely option,
   	 * no matter what other matches were
   	 */
-  	if(inMatch > 70.0) {
-  		return Drink.EMPTY
+  	} else if(matches(FridgeItem.EMPTY) > 70.0) {
+  		return FridgeItem.EMPTY
   	
   	/*
   	 * If match for beer is over 62% and greater than match for long drink,
   	 * it most likely is beer
   	 */
-  	} else if(beerMatch > 62.0 && beerMatch > longMatch) {
-  		return Drink.BEER
+  	} else if(matches(FridgeItem.BEER) > 62.0 && matches(FridgeItem.BEER) > matches(FridgeItem.LONG)) {
+  		return FridgeItem.BEER
   	
   	/*
   	 *  If match for long drink is over 65% (and it's also probably greater than match for beer),
   	 *  it most likely is a long drink
   	 */
-  	} else if(longMatch > 65.0) {
-  		return Drink.LONG
+  	} else if(matches(FridgeItem.LONG) > 65.0) {
+  		return FridgeItem.LONG
   	
-  	// Otherwise it's probably not a drink
+  	// Otherwise it's probably not a FridgeItem
   	} else {
-  		return Drink.EMPTY
+  		return FridgeItem.EMPTY
   	}
   }
   
@@ -285,5 +288,40 @@ object Brain extends App {
   		total += matchPercentage * pixelPercentage
   	}
   	return total * 100
+  }
+  
+  /**
+   * Handles result matching and calls increment matching given result
+   * @param result		Result of matching
+   */
+  def increaseCount(result: FridgeItem.Value) {
+  	// Beers and long drinks need increment by two because they are in two rows
+  	if(result.toString().equals("BEER") || result.toString().equals("LONG")) {
+  		if(!contents.keySet.contains(result)) contents(result) = 2
+  		else contents(result) += 2
+  	} else {
+  		if(!contents.keySet.contains(result)) contents(result) = 1
+  		else contents(result) += 1
+  	}
+  }
+  
+  /**
+   * Returns message that can be sent to user via Telegram
+   * @return		Message containing contents of fridge
+   */
+  def getMessage(): String = {
+  	var msg = "Contents:\n"
+  	for(item <- contents.keySet) {
+  		if(!item.toString.equals("EMPTY")) {
+  			msg += item.toString + ": " + contents(item) + "\n"
+  		}
+  	}
+  	msg += "Missing:\n"
+  	for(item <- FridgeItem.values) {
+  		if(!contents.keySet.contains(item)) {
+  			msg += item.toString + "\n"
+  		}
+  	}
+  	return msg
   }
 }

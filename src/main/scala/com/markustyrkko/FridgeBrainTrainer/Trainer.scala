@@ -11,6 +11,10 @@ import javax.imageio.ImageIO
 import scala.collection.mutable.Buffer
 import java.io.BufferedReader
 import java.io.FileReader
+import java.io.BufferedWriter
+import java.io.FileInputStream
+import java.io.PrintWriter
+import java.io.FileWriter
 
 object Trainer extends App {
   val trainingData = new File("trainingData/").listFiles().toIterator
@@ -152,12 +156,18 @@ object Trainer extends App {
   	jams(jams.indexOf(j)) = Buffer[Array[Array[(Int, Int, Int)]]]()
   }
   
+  val writer = new BufferedWriter(new FileWriter(new File("trainingMapping.txt")))
+  
   main.reactions += {
   	case ButtonClicked(b) => {
   		if(!b.text.equals("quit")) {
   			var img = ImageIO.read(currentImg)
   			var pos = currentImg.toString().split('\\')(1).split('-')(0).toInt
   			Brain.bwSub(img)
+  			
+  			if(!b.text.equals("FAST")) {
+  				writer.write(currentImg.toString() + "=" + b.text + "\n")
+  			}
   			
   			b.text match {
 					case "Beer" => beers(pos) += pixels(img)
@@ -191,9 +201,11 @@ object Trainer extends App {
   			if(trainingData.hasNext) {
   				changeCurrentImg()	
   			} else {
+  				writer.close()
   				calculate()
   			}
   		} else {
+  			writer.close()
   			calculate()
   		}
   	}
@@ -251,24 +263,19 @@ object Trainer extends App {
   	main.dispose()
 		for(beer <- beers) {
 			if(beer.length > 0) {
-				saveImg(average(beer), beers.indexOf(beer) + "/Beer")	
+				saveImg(average(beer), beers.indexOf(beer) + "/BEER")	
 			}
 		}
   	
   	for(long <- longs) {
   		if(long.length > 0) {
-  			saveImg(average(long), longs.indexOf(long) + "/Long")	
+  			saveImg(average(long), longs.indexOf(long) + "/LONG")	
   		}
   	}
   	
   	for(in <- ins) {
   		if(in.length > 0) {
-  			saveImg(average(in), ins.indexOf(in) + "/In")	
-  		}
-  	}
-  	for(out <- outs) {
-  		if(out.length > 0) {
-  			saveImg(average(out), outs.indexOf(out) + "/Out")	
+  			saveImg(average(in), ins.indexOf(in) + "/EMPTY")	
   		}
   	}
   	for(out <- outs) {
@@ -278,29 +285,28 @@ object Trainer extends App {
   	}
   	for(procCheese <- procCheeses) {
   		if(procCheese.length > 0) {
-  			saveImg(average(procCheese), procCheeses.indexOf(procCheese) + "/ProcCheese")	
+  			saveImg(average(procCheese), procCheeses.indexOf(procCheese) + "/PROCCHEESE")	
   		}
   	}
   	for(ham <- hams) {
   		if(ham.length > 0) {
-  			saveImg(average(ham), hams.indexOf(ham) + "/Ham")	
+  			saveImg(average(ham), hams.indexOf(ham) + "/HAM")	
   		}
   	}
   	for(cheese <- cheeses) {
   		if(cheese.length > 0) {
-  			saveImg(average(cheese), cheeses.indexOf(cheese) + "/Cheese")	
+  			saveImg(average(cheese), cheeses.indexOf(cheese) + "/CHEESE")	
   		}
   	}
   	for(butter <- butters) {
   		if(butter.length > 0) {
-  			saveImg(average(butter), butters.indexOf(butter) + "/Butter")	
+  			saveImg(average(butter), butters.indexOf(butter) + "/BUTTER")	
   		}
   	}
   	for(jam <- jams) {
   		if(jam.length > 0) {
-  			saveImg(average(jam), jams.indexOf(jam) + "/Jam")	
+  			saveImg(average(jam), jams.indexOf(jam) + "/JAM")	
   		}
-  	}
-  	
+  	} 	
   }
 }
