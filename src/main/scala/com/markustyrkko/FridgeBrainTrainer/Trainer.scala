@@ -11,6 +11,10 @@ import javax.imageio.ImageIO
 import scala.collection.mutable.Buffer
 import java.io.BufferedReader
 import java.io.FileReader
+import java.io.BufferedWriter
+import java.io.FileInputStream
+import java.io.PrintWriter
+import java.io.FileWriter
 
 object Trainer extends App {
   val trainingData = new File("trainingData/").listFiles().toIterator
@@ -70,6 +74,31 @@ object Trainer extends App {
   wrapper.contents += otherOUT
   
   wrapper.contents += HStrut(1)
+  val procCheese = new Button("procCheese")
+  main.listenTo(procCheese)
+  wrapper.contents += procCheese
+  
+  wrapper.contents += HStrut(1)
+  val ham = new Button("ham")
+  main.listenTo(ham)
+  wrapper.contents += ham
+  
+  wrapper.contents += HStrut(1)
+  val cheese = new Button("cheese")
+  main.listenTo(cheese)
+  wrapper.contents += cheese
+  
+  wrapper.contents += HStrut(1)
+  val butter = new Button("butter")
+  main.listenTo(butter)
+  wrapper.contents += butter
+  
+  wrapper.contents += HStrut(1)
+  val jam = new Button("jam")
+  main.listenTo(jam)
+  wrapper.contents += jam
+  
+  wrapper.contents += HStrut(1)
   val fast = new Button("FAST")
   main.listenTo(fast)
   wrapper.contents += fast
@@ -81,10 +110,15 @@ object Trainer extends App {
   
   main.contents = wrapper
   
-  val beers = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](9)
-  val longs = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](9)
-  val ins = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](9)
-  val outs = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](9)
+  val beers = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val longs = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val ins = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val outs = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val procCheeses = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val hams = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val cheeses = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val butters = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
+  val jams = Array.ofDim[Buffer[Array[Array[(Int, Int, Int)]]]](20)
   
   for(b <- beers) {
   	beers(beers.indexOf(b)) = Buffer[Array[Array[(Int, Int, Int)]]]()
@@ -102,6 +136,28 @@ object Trainer extends App {
   	outs(outs.indexOf(o)) = Buffer[Array[Array[(Int, Int, Int)]]]()
   }
   
+  for(p <- procCheeses) {
+  	procCheeses(procCheeses.indexOf(p)) = Buffer[Array[Array[(Int, Int, Int)]]]()
+  }
+  
+  for(h <- hams) {
+  	hams(hams.indexOf(h)) = Buffer[Array[Array[(Int, Int, Int)]]]()
+  }
+  
+  for(c <- cheeses) {
+  	cheeses(cheeses.indexOf(c)) = Buffer[Array[Array[(Int, Int, Int)]]]()
+  }
+  
+  for(b <- butters) {
+  	butters(butters.indexOf(b)) = Buffer[Array[Array[(Int, Int, Int)]]]()
+  }
+  
+  for(j <- jams) {
+  	jams(jams.indexOf(j)) = Buffer[Array[Array[(Int, Int, Int)]]]()
+  }
+  
+  val writer = new BufferedWriter(new FileWriter(new File("trainingMapping.txt")))
+  
   main.reactions += {
   	case ButtonClicked(b) => {
   		if(!b.text.equals("quit")) {
@@ -109,11 +165,20 @@ object Trainer extends App {
   			var pos = currentImg.toString().split('\\')(1).split('-')(0).toInt
   			Brain.bwSub(img)
   			
+  			if(!b.text.equals("FAST")) {
+  				writer.write(currentImg.toString() + "=" + b.text + "\n")
+  			}
+  			
   			b.text match {
 					case "Beer" => beers(pos) += pixels(img)
 					case "Long drink" => longs(pos) += pixels(img)
 					case "otherIN" => ins(pos) += pixels(img)
 					case "otherOUT" => outs(pos) += pixels(img)
+					case "procCheese" => procCheeses(pos) += pixels(img)
+					case "ham" => hams(pos) += pixels(img)
+					case "cheese" => cheeses(pos) += pixels(img)
+					case "butter" => butters(pos) += pixels(img)
+					case "jam" => jams(pos) += pixels(img)
 					case "FAST" => 
 						while(trainingData.hasNext) {
 							img = ImageIO.read(currentImg)
@@ -124,6 +189,11 @@ object Trainer extends App {
 								case "Long drink" => longs(pos) += pixels(img)
 								case "otherIN" => ins(pos) += pixels(img)
 								case "otherOUT" => outs(pos) += pixels(img)
+								case "procCheese" => procCheeses(pos) += pixels(img)
+								case "ham" => hams(pos) += pixels(img)
+								case "cheese" => cheeses(pos) += pixels(img)
+								case "butter" => butters(pos) += pixels(img)
+								case "jam" => jams(pos) += pixels(img)
 							}
 							currentImg = trainingData.next
 						}
@@ -131,9 +201,11 @@ object Trainer extends App {
   			if(trainingData.hasNext) {
   				changeCurrentImg()	
   			} else {
+  				writer.close()
   				calculate()
   			}
   		} else {
+  			writer.close()
   			calculate()
   		}
   	}
@@ -184,26 +256,26 @@ object Trainer extends App {
   		val b = Math.min(pixels(x)(y)._3.toInt, 255)
   		img.setRGB(x, y, r + g + b)
   	}
-  	ImageIO.write(img, "jpg", new File("./models/" + name + ".jpg"))
+  	ImageIO.write(img, "jpg", new File("./resources/models/" + name + ".jpg"))
   }
   
   def calculate() {
   	main.dispose()
 		for(beer <- beers) {
 			if(beer.length > 0) {
-				saveImg(average(beer), beers.indexOf(beer) + "/Beer")	
+				saveImg(average(beer), beers.indexOf(beer) + "/BEER")	
 			}
 		}
   	
   	for(long <- longs) {
   		if(long.length > 0) {
-  			saveImg(average(long), longs.indexOf(long) + "/Long")	
+  			saveImg(average(long), longs.indexOf(long) + "/LONG")	
   		}
   	}
   	
   	for(in <- ins) {
   		if(in.length > 0) {
-  			saveImg(average(in), ins.indexOf(in) + "/In")	
+  			saveImg(average(in), ins.indexOf(in) + "/EMPTY")	
   		}
   	}
   	for(out <- outs) {
@@ -211,5 +283,30 @@ object Trainer extends App {
   			saveImg(average(out), outs.indexOf(out) + "/Out")	
   		}
   	}
+  	for(procCheese <- procCheeses) {
+  		if(procCheese.length > 0) {
+  			saveImg(average(procCheese), procCheeses.indexOf(procCheese) + "/PROCCHEESE")	
+  		}
+  	}
+  	for(ham <- hams) {
+  		if(ham.length > 0) {
+  			saveImg(average(ham), hams.indexOf(ham) + "/HAM")	
+  		}
+  	}
+  	for(cheese <- cheeses) {
+  		if(cheese.length > 0) {
+  			saveImg(average(cheese), cheeses.indexOf(cheese) + "/CHEESE")	
+  		}
+  	}
+  	for(butter <- butters) {
+  		if(butter.length > 0) {
+  			saveImg(average(butter), butters.indexOf(butter) + "/BUTTER")	
+  		}
+  	}
+  	for(jam <- jams) {
+  		if(jam.length > 0) {
+  			saveImg(average(jam), jams.indexOf(jam) + "/JAM")	
+  		}
+  	} 	
   }
 }
