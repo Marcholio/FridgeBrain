@@ -109,7 +109,7 @@ object Brain extends App {
 		
 		// Parse Json to Map
 		var result = Map[String, (Int, List[Int])]()
-		val parser = new JsonParser()
+		val parser = new JsonParser
 		val jsonArray = parser.parse(jsonString).getAsJsonArray
 		for(i <- 0 until jsonArray.size()) {
 			val row = jsonArray.get(i).getAsJsonObject
@@ -205,7 +205,7 @@ object Brain extends App {
   			val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + ".jpg"))
   			matches(item) =	matcher(model, image)
   		} catch {
-  			case _ => matches(item) = 0.0
+  			case _: Throwable => matches(item) = 0.0
   		}
   	}
   	
