@@ -23,9 +23,9 @@ import scala.collection.mutable.Map
 object Brain extends App {
 	
 	// Uncomment to test as separate application without server
-	private val baos = new ByteArrayOutputStream()
-	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
-	println(analyze(baos.toByteArray()))
+	//private val baos = new ByteArrayOutputStream()
+	//ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
+	//println(analyze(baos.toByteArray()))
 	
 	private var contents: Map[FridgeItem.Value, Int] = null
 	
@@ -37,6 +37,9 @@ object Brain extends App {
 	def analyze(bytes: Array[Byte]): String = {
 		// Convert bytes to BufferedImage
 		val img = getImage(bytes)
+		
+		// Check if image is valid to begin with
+		if(getAvgColor(img).getRed < 73) return "Invalid image"
 		
 		// Image dimensions
 	  val height = img.getHeight
