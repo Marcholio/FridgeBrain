@@ -49,7 +49,7 @@ object Brain extends App {
 	  
 	  contents = Map[FridgeItem.Value, Int]()
 	  
-	  // variables for subimage position
+	  // Variables for subimage position
 	  var y = 0
 	  var pos = 0
 	  
@@ -68,6 +68,8 @@ object Brain extends App {
 		  	
 		  	// Compare map to known models of each drink and empty space
 				val result = getMatch(subImg, pos)
+				
+				updateModel(result, subImg, pos)
 
 				increaseCount(result)
 				
@@ -121,6 +123,7 @@ object Brain extends App {
 			var j = 1
 			var width = row.get("width" + j)
 			var widthList = List[Int]()
+			
 			// Loop through widths
 			while(width != null) {
 				widthList = widthList :+ width.getAsInt
@@ -291,6 +294,22 @@ object Brain extends App {
   		total += matchPercentage * pixelPercentage
   	}
   	return total * 100
+  }
+  
+  /**
+   * The learning method of the brain. Modifies existing model with given sub image with 1:50 ratio.
+   */
+  def updateModel(item: FridgeItem.Value, subImg: BufferedImage, pos: Int) {
+  	// Get existing model from resources
+  	var model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + ".jpg"))
+  	
+  	// Loop through all pixels
+  	for(y <- 0 until model.getHeight; x <- 0 until model.getWidth) {
+  		// Get new color with 98% of original model and 2% of new image and set it to new model
+  		val color = (0.98 * model.getRGB(x, y) + 0.02 * subImg.getRGB(x, y)).toInt
+  		model.setRGB(x, y, color)
+  		ImageIO.write(model, "jpg", new File("./resources/models/" + pos + "/" + item.toString() + ".jpg"))
+  	}
   }
   
   /**
