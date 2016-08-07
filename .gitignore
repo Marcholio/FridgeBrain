@@ -33,10 +33,11 @@ build.log
 #  ^\.pc/
 #SHITTY output not in target directory
 build.log
-originals/*
+originals/
 examData/
 trainingData/
 .cache-main
 Fridge.jpg
 img.jpg
 matched.jpg
+resources/models/
