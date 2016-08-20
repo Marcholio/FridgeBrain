@@ -68,7 +68,7 @@ object Trainer extends App {
   val btnWrapper = new BoxPanel (Orientation.Horizontal)
   btnWrapper.contents += VStrut(1)
   
-  // Loop through all categories
+  // Read all categories from file
   val categoriesXML = XML.loadFile("resources/categories.xml").child.filter(_.label.equals("category"))
   
   /*
@@ -87,9 +87,10 @@ object Trainer extends App {
   	
   	val brandsXML = c.child.filter(_.label.equals("brand"))
   	
-  	if(brandsXML.size == 0) {
-  		// General button for category
-  		addButton(categoryName, categoryWrapper)
+		// Add buttons for each brand and listeners for them
+	  for(brand <- brandsXML) {
+  		addButton(categoryName + " - " + brand.attribute("name").get.toString(), categoryWrapper)
+  		
   		// Array for each position
   		val positions = Array.ofDim[Buffer[PixelArray]](20)
   		
@@ -99,24 +100,7 @@ object Trainer extends App {
   		}
   		
   		// Add positions to map with brand as a key
-  		items(categoryName) = positions
-  		
-  	} else {
-  		// Add buttons for each brand and listeners for them
-	  	for(brand <- brandsXML) {
-	  		addButton(categoryName + " - " + brand.attribute("name").get.toString(), categoryWrapper)
-	  		
-	  		// Array for each position
-	  		val positions = Array.ofDim[Buffer[PixelArray]](20)
-	  		
-	  		// Initialize each position with buffer to save training images
-	  		for (pos <- positions) {
-	  			positions(positions.indexOf(pos)) = Buffer[PixelArray]()
-	  		}
-	  		
-	  		// Add positions to map with brand as a key
-	  		items(categoryName + " - " + brand.attribute("name").get.toString()) = positions
-	  	}
+  		items(categoryName + " - " + brand.attribute("name").get.toString()) = positions
   	}
   	
   	// Add category to buttons wrapper
