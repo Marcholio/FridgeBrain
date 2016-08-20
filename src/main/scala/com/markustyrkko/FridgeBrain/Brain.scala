@@ -24,9 +24,9 @@ import scala.xml.XML
 object Brain extends App {
 	
 	// Uncomment to test as separate application without server
-//	private val baos = new ByteArrayOutputStream()
-//	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
-//	println(analyze(baos.toByteArray()))
+	private val baos = new ByteArrayOutputStream()
+	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
+	println(analyze(baos.toByteArray()))
 	
 	private var contents: Map[FridgeItem.Value, Int] = null
 	private var categories: Map[FridgeItem.Value, Buffer[String]] = null
@@ -144,7 +144,17 @@ object Brain extends App {
 	def getCategories(): Map[FridgeItem.Value, Buffer[String]] = {
 		val result = Map[FridgeItem.Value, Buffer[String]]()
 		
-		val categoriesXML = XML.loadFile("resources/categories.xml").child.filter(_.label.equals("category"))
+		val resource = getClass().getResourceAsStream("/categories.xml")
+		val reader = new BufferedReader(new InputStreamReader(resource, "UTF-8"))
+		var line = reader.readLine()
+		var xmlString = ""
+		while(line != null) {
+			xmlString += line
+			line = reader.readLine()
+		}
+		reader.close()
+		
+		val categoriesXML = XML.loadString(xmlString).child.filter(_.label.equals("category"))
 		for (c <- categoriesXML) {
 			val item = FridgeItem.withName(c.attribute("name").get.toString())
 			result(item) = Buffer[String]()
