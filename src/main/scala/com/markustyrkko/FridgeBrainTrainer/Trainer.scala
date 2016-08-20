@@ -19,6 +19,9 @@ import scala.xml._
 
 object Trainer extends App {
 	
+	println("Which position you want to train? (0-19)")
+	val selectedPosition = readLine()
+	
 	// Get all files from trainingData and originals folders
   val trainingData = new File("trainingData/").listFiles().toIterator
   val origins = new File("originals/").listFiles().toIterator
@@ -162,7 +165,15 @@ object Trainer extends App {
    * Changes displayed image
    */
   def changeCurrentImg() {
-  	currentImg = trainingData.next()
+  	if(selectedPosition.equalsIgnoreCase("all")) {
+  		currentImg = trainingData.next()
+  	} else {
+  		do {
+  			currentImg = trainingData.next()
+  		} while(trainingData.hasNext && !currentImg.toString().startsWith("trainingData\\" + selectedPosition + "-"))
+  	}
+  	
+  	
   	img.icon = new ImageIcon(currentImg.toString())
   }
   
