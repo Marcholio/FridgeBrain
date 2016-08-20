@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<categories>
+	<category name="Empty">
+		<brand name="Empty" />
+	</category>
+	<category name="Out">
+		<brand name="Out" />
+	</category>
+	<category name="Beer">
+		<brand name="Karhu" />
+		<brand name="Karhu_strong" />
+		<brand name="Sandels" />
+	</category>
+	<category name="Butter">
+		<brand name="Ingmariini" />
+	</category>
+	<category name="Cheese">
+		<brand name="Oltermanni" />
+	</category>
+	<category name="Ham">
+		<brand name="Saarioinen" />
+	</category>
+	<category name="Jam">
+		<brand name="Xtra" />
+	</category>
+	<category name="Long_drink">
+		<brand name="Sinebrychoff_lime"/>
+	</category>
+	<category name="Processed_cheese">
+		<brand name="Rainbow" />
+	</category>
+</categories>

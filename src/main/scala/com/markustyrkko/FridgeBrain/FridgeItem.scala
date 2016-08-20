@@ -1,5 +1,13 @@
 package com.markustyrkko.FridgeBrain
 
 object FridgeItem extends Enumeration {
-  val BEER, LONG, PROCCHEESE, HAM, CHEESE, BUTTER, JAM, EMPTY = Value
+  val Beer,
+  Butter,
+  Cheese,
+  Ham,
+  Jam,
+  Long_drink,
+  Processed_cheese,
+  Empty,
+  Out = Value
 }

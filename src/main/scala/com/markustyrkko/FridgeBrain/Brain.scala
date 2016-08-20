@@ -8,7 +8,6 @@ import java.awt.image.BufferedImage
 import com.sun.prism.BasicStroke
 import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.nio.Buffer
 import scala.util.parsing.json.JSONObject
 import com.google.gson.stream.JsonReader
 import com.google.gson.JsonStreamParser
@@ -19,15 +18,18 @@ import scala.util.parsing.json.JSONArray
 import com.google.gson.JsonArray
 import com.google.gson.JsonParser
 import scala.collection.mutable.Map
+import scala.collection.mutable.Buffer
+import scala.xml.XML
 
 object Brain extends App {
 	
 	// Uncomment to test as separate application without server
-	//private val baos = new ByteArrayOutputStream()
-	//ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
-	//println(analyze(baos.toByteArray()))
+//	private val baos = new ByteArrayOutputStream()
+//	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
+//	println(analyze(baos.toByteArray()))
 	
 	private var contents: Map[FridgeItem.Value, Int] = null
+	private var categories: Map[FridgeItem.Value, Buffer[String]] = null
 	
 	/**
 	 * Analyzes given image and returns result of it's content as String
@@ -47,9 +49,11 @@ object Brain extends App {
 	  
 	  val sectors = getSectors()
 	  
+	  categories = getCategories()
+	  
 	  contents = Map[FridgeItem.Value, Int]()
 	  
-	  // variables for subimage position
+	  // Variables for subimage position
 	  var y = 0
 	  var pos = 0
 	  
@@ -121,6 +125,7 @@ object Brain extends App {
 			var j = 1
 			var width = row.get("width" + j)
 			var widthList = List[Int]()
+			
 			// Loop through widths
 			while(width != null) {
 				widthList = widthList :+ width.getAsInt
@@ -128,6 +133,26 @@ object Brain extends App {
 				width = row.get("width" + j)
 			}
 			result("row" + i) = (height, widthList)
+		}
+		return result
+	}
+	
+	/**
+	 * Reads category information from categories.xml file
+	 * @return	Map with category as a key and list of brand names as String as value
+	 */
+	def getCategories(): Map[FridgeItem.Value, Buffer[String]] = {
+		val result = Map[FridgeItem.Value, Buffer[String]]()
+		
+		val categoriesXML = XML.loadFile("resources/categories.xml").child.filter(_.label.equals("category"))
+		for (c <- categoriesXML) {
+			val item = FridgeItem.withName(c.attribute("name").get.toString())
+			result(item) = Buffer[String]()
+			
+			val brandsXML = c.child.filter(_.label.equals("brand"))
+			for (b <- brandsXML) {
+				result(item) += b.attribute("name").get.toString()
+			}
 		}
 		return result
 	}
@@ -200,62 +225,65 @@ object Brain extends App {
    * @return				Value of Drink enumeration representing the most likely match for given position
    */
   def getMatch(image: BufferedImage, pos: Int): FridgeItem.Value = {
-  	val matches = Map[FridgeItem.Value, Double]()
+  	val matches = Map[FridgeItem.Value, Buffer[(String, Double)]]()
   	
   	// Load models from memory for each possible option and compare image to it
   	for(item <- FridgeItem.values) {
-  		try {
-  			val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + ".jpg"))
-  			matches(item) =	matcher(model, image)
-  		} catch {
-  			case _: Throwable => matches(item) = 0.0
+  		for(brand <- categories(item)) {
+  			try {
+	  			val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + " - " + brand + ".jpg"))
+	  			if(matches.keySet.contains(item)) {
+	  				matches(item) +=	Tuple2(brand, matcher(model, image))
+	  			} else {
+	  				matches(item) = Buffer[(String, Double)](Tuple2(brand, matcher(model, image)))
+	  			}
+	  		} catch {
+	  			case _: Throwable => matches(item) = Buffer[(String, Double)](Tuple2(brand, 0.0))
+	  		}
   		}
   	}
-  	
+
   	// Uncomment for debugging purposes
-  	//println(pos + ": " + matches)
+  	//println(pos + ": " + matches.toString().replace("ArrayBuffer", ""))
   	
   	// Following limits are based on empirical study and should be modified if necessary
+  	// Beer
+  	if (matches(FridgeItem.Beer).maxBy(_._2)._2 > 69 && matches(FridgeItem.Empty).head._2 < 65) {
+  		//updateModel("Beer - " + matches(FridgeItem.Beer).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Beer
   	
-  	if(matches(FridgeItem.PROCCHEESE) > 85.0) {
-  		return FridgeItem.PROCCHEESE
+  	// Butter
+  	} else if (matches(FridgeItem.Butter).maxBy(_._2)._2 > 70 && matches(FridgeItem.Empty).head._2 < 80) {
+  		//updateModel("Butter - " + matches(FridgeItem.Butter).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Butter
+  	
+  	// Cheese
+  	} else if (matches(FridgeItem.Cheese).maxBy(_._2)._2 > 55) {
+  		//updateModel("Cheese - " + matches(FridgeItem.Cheese).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Cheese
+  	
+  	// Ham
+  	} else if (matches(FridgeItem.Ham).maxBy(_._2)._2 > 78) {
+  		//updateModel("Ham - " + matches(FridgeItem.Ham).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Ham
   		
-  	} else if(matches(FridgeItem.JAM) > 85.0) {
-  		return FridgeItem.JAM
-  	
-  	} else if(matches(FridgeItem.HAM) > matches(FridgeItem.EMPTY)) {
-  		return FridgeItem.HAM
-  	
-  	} else if(matches(FridgeItem.CHEESE) > matches(FridgeItem.EMPTY)) {
-  		return FridgeItem.CHEESE
-  	
-  	} else if(matches(FridgeItem.BUTTER) > matches(FridgeItem.EMPTY)) {
-  		return FridgeItem.BUTTER
+  	// Jam
+  	} else if (matches(FridgeItem.Jam).maxBy(_._2)._2 > 70 && matches(FridgeItem.Jam).maxBy(_._2)._2 > matches(FridgeItem.Empty).head._2) {
+  		//updateModel("Jam - " + matches(FridgeItem.Jam).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Jam
   		
-  	/*
-  	 * If the match for empty spot is over 70%, it's the most likely option,
-  	 * no matter what other matches were
-  	 */
-  	} else if(matches(FridgeItem.EMPTY) > 70.0) {
-  		return FridgeItem.EMPTY
-  	
-  	/*
-  	 * If match for beer is over 62% and greater than match for long drink,
-  	 * it most likely is beer
-  	 */
-  	} else if(matches(FridgeItem.BEER) > 62.0 && matches(FridgeItem.BEER) > matches(FridgeItem.LONG)) {
-  		return FridgeItem.BEER
-  	
-  	/*
-  	 *  If match for long drink is over 65% (and it's also probably greater than match for beer),
-  	 *  it most likely is a long drink
-  	 */
-  	} else if(matches(FridgeItem.LONG) > 65.0) {
-  		return FridgeItem.LONG
-  	
-  	// Otherwise it's probably not a FridgeItem
+  	// Long_drink
+  	} else if (matches(FridgeItem.Long_drink).maxBy(_._2)._2 > 75) {
+  		//updateModel("Long_drink - " + matches(FridgeItem.Long_drink).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Long_drink
+  		
+  	// Processed cheese
+  	} else if (matches(FridgeItem.Processed_cheese).maxBy(_._2)._2 > 84) {
+  		//updateModel("Processed_cheese - " + matches(FridgeItem.Processed_cheese).maxBy(_._2)._1, image, pos)
+  		return FridgeItem.Processed_cheese
+  		
   	} else {
-  		return FridgeItem.EMPTY
+  		return FridgeItem.Empty
   	}
   }
   
@@ -294,12 +322,32 @@ object Brain extends App {
   }
   
   /**
+   * The learning method of the brain. Modifies existing model with given sub image with 1:50 ratio.
+   */
+  def updateModel(fileName: String, subImg: BufferedImage, pos: Int) {
+  	// Get existing model from resources
+  	val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + fileName + ".jpg"))
+  	val newModel = copyImg(model)
+  	
+  	// Loop through all pixels
+  	for(y <- 0 until model.getHeight; x <- 0 until model.getWidth) {
+  		// Get new color with 98% of original model and 2% of new image and set it to new model
+  		val color = (new Color(model.getRGB(x, y)).getRed * 0.98 + new Color(subImg.getRGB(x, y)).getRed * 0.02).toInt
+  		println("FROM " + new Color(model.getRGB(x, y)).getRed + " " + new Color(subImg.getRGB(x, y)).getRed)
+  		newModel.setRGB(x, y, (new Color(color, color, color)).getRGB)
+  		println("TO   " + new Color(newModel.getRGB(x, y)).getRed)
+  		
+  	}
+  	ImageIO.write(newModel, "jpg", new File("./resources/models/" + pos + "/" + fileName + ".jpg"))
+  }
+  
+  /**
    * Handles result matching and calls increment matching given result
    * @param result		Result of matching
    */
   def increaseCount(result: FridgeItem.Value) {
   	// Beers and long drinks need increment by two because they are in two rows
-  	if(result.toString().equals("BEER") || result.toString().equals("LONG")) {
+  	if(result.toString().equals("Beer") || result.toString().equals("Long_drink")) {
   		if(!contents.keySet.contains(result)) contents(result) = 2
   		else contents(result) += 2
   	} else {
@@ -315,14 +363,14 @@ object Brain extends App {
   def getMessage(): String = {
   	var msg = "Contents:\n"
   	for(item <- contents.keySet) {
-  		if(!item.toString.equals("EMPTY")) {
-  			msg += item.toString + ": " + contents(item) + "\n"
+  		if(!item.toString.equals("Empty") && !item.toString.equals("Out")) {
+  			msg += item.toString.replace("_", " ") + ": " + contents(item) + "\n"
   		}
   	}
   	msg += "Missing:\n"
   	for(item <- FridgeItem.values) {
-  		if(!contents.keySet.contains(item)) {
-  			msg += item.toString + "\n"
+  		if(!contents.keySet.contains(item) && !item.toString().equals("Out")) {
+  			msg += item.toString.replace("_", " ") + "\n"
   		}
   	}
   	return msg

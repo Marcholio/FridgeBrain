@@ -6,18 +6,15 @@ syntax: glob
 *.bak
 #*.off
 *.old
-
 # eclipse conf file
 .settings
 .classpath
 .project
 .manager
 .scala_dependencies
-
 # idea
 .idea
 *.iml
-
 # building
 target
 build
@@ -27,24 +24,21 @@ temp*
 dist
 test-output
 build.log
-
 # other scm
 .svn
 .CVS
 .hg*
-
 # switch to regexp syntax.
 #  syntax: regexp
 #  ^\.pc/
-
 #SHITTY output not in target directory
 build.log
-/originals/
-/examData/
-/trainingData/
-/originals/
+originals/
+examData/
+trainingData/
 .cache-main
 Fridge.jpg
 img.jpg
 matched.jpg
-/resources/models/
+resources/models/
+Limits.ods
