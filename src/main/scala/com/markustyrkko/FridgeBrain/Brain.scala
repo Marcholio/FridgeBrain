@@ -24,9 +24,9 @@ import scala.xml.XML
 object Brain extends App {
 	
 	// Uncomment to test as separate application without server
-	private val baos = new ByteArrayOutputStream()
-	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
-	println(analyze(baos.toByteArray()))
+//	private val baos = new ByteArrayOutputStream()
+//	ImageIO.write(ImageIO.read(new File("Fridge.jpg")), "jpg", baos)
+//	println(analyze(baos.toByteArray()))
 	
 	private var contents: Map[FridgeItem.Value, Int] = null
 	private var categories: Map[FridgeItem.Value, Buffer[String]] = null
@@ -241,7 +241,7 @@ object Brain extends App {
   	for(item <- FridgeItem.values) {
   		for(brand <- categories(item)) {
   			try {
-	  			val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + item.toString() + " - " + brand + ".jpg"))
+	  			val model = ImageIO.read(new File("../models/" + pos + "/" + item.toString() + " - " + brand + ".jpg"))
 	  			if(matches.keySet.contains(item)) {
 	  				matches(item) +=	Tuple2(brand, matcher(model, image))
 	  			} else {
@@ -259,40 +259,42 @@ object Brain extends App {
   	// Following limits are based on empirical study and should be modified if necessary
   	// Beer
   	if (matches(FridgeItem.Beer).maxBy(_._2)._2 > 69 && matches(FridgeItem.Empty).head._2 < 65) {
-  		//updateModel("Beer - " + matches(FridgeItem.Beer).maxBy(_._2)._1, image, pos)
+  		updateModel("Beer - " + matches(FridgeItem.Beer).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Beer
   	
   	// Butter
   	} else if (matches(FridgeItem.Butter).maxBy(_._2)._2 > 70 && matches(FridgeItem.Empty).head._2 < 80) {
-  		//updateModel("Butter - " + matches(FridgeItem.Butter).maxBy(_._2)._1, image, pos)
+  		updateModel("Butter - " + matches(FridgeItem.Butter).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Butter
   	
   	// Cheese
   	} else if (matches(FridgeItem.Cheese).maxBy(_._2)._2 > 55) {
-  		//updateModel("Cheese - " + matches(FridgeItem.Cheese).maxBy(_._2)._1, image, pos)
+  		updateModel("Cheese - " + matches(FridgeItem.Cheese).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Cheese
   	
   	// Ham
   	} else if (matches(FridgeItem.Ham).maxBy(_._2)._2 > 78) {
-  		//updateModel("Ham - " + matches(FridgeItem.Ham).maxBy(_._2)._1, image, pos)
+  		updateModel("Ham - " + matches(FridgeItem.Ham).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Ham
   		
   	// Jam
   	} else if (matches(FridgeItem.Jam).maxBy(_._2)._2 > 70 && matches(FridgeItem.Jam).maxBy(_._2)._2 > matches(FridgeItem.Empty).head._2) {
-  		//updateModel("Jam - " + matches(FridgeItem.Jam).maxBy(_._2)._1, image, pos)
+  		updateModel("Jam - " + matches(FridgeItem.Jam).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Jam
   		
   	// Long_drink
   	} else if (matches(FridgeItem.Long_drink).maxBy(_._2)._2 > 75) {
-  		//updateModel("Long_drink - " + matches(FridgeItem.Long_drink).maxBy(_._2)._1, image, pos)
+  		updateModel("Long_drink - " + matches(FridgeItem.Long_drink).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Long_drink
   		
   	// Processed cheese
   	} else if (matches(FridgeItem.Processed_cheese).maxBy(_._2)._2 > 84) {
-  		//updateModel("Processed_cheese - " + matches(FridgeItem.Processed_cheese).maxBy(_._2)._1, image, pos)
+  		updateModel("Processed_cheese - " + matches(FridgeItem.Processed_cheese).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Processed_cheese
-  		
+  	
+  	// Empty
   	} else {
+  		updateModel("Empty - " + matches(FridgeItem.Empty).maxBy(_._2)._1, image, pos)
   		return FridgeItem.Empty
   	}
   }
@@ -336,19 +338,17 @@ object Brain extends App {
    */
   def updateModel(fileName: String, subImg: BufferedImage, pos: Int) {
   	// Get existing model from resources
-  	val model = ImageIO.read(getClass().getResourceAsStream("/models/" + pos + "/" + fileName + ".jpg"))
+  	val model = ImageIO.read(new File(System.getProperty("user.dir") + "/models/" + pos + "/" + fileName + ".jpg"))
   	val newModel = copyImg(model)
   	
   	// Loop through all pixels
   	for(y <- 0 until model.getHeight; x <- 0 until model.getWidth) {
   		// Get new color with 98% of original model and 2% of new image and set it to new model
   		val color = (new Color(model.getRGB(x, y)).getRed * 0.98 + new Color(subImg.getRGB(x, y)).getRed * 0.02).toInt
-  		println("FROM " + new Color(model.getRGB(x, y)).getRed + " " + new Color(subImg.getRGB(x, y)).getRed)
   		newModel.setRGB(x, y, (new Color(color, color, color)).getRGB)
-  		println("TO   " + new Color(newModel.getRGB(x, y)).getRed)
   		
   	}
-  	ImageIO.write(newModel, "jpg", new File("./resources/models/" + pos + "/" + fileName + ".jpg"))
+  	ImageIO.write(newModel, "jpg", new File(System.getProperty("user.dir") + "/models/" + pos + "/" + fileName + ".jpg"))
   }
   
   /**
